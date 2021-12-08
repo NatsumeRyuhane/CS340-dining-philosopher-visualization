@@ -1,5 +1,5 @@
 # change the import source to see different results
-from solution_0 import Table, Philosopher
+from solution_5 import Table, Philosopher
 
 n = 5
 

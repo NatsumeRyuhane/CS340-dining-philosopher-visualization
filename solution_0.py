@@ -13,6 +13,7 @@ class Table:
             self.fork.append(threading.Lock())
             self.philosopher.append(None)
 
+        # a pencil on the table prevents the shared output problem
         self.pencil = threading.Lock()
 
     def add_philosopher(self, philosopher, position):
@@ -41,8 +42,11 @@ class Philosopher:
         self.position = position
         self.state = 0
 
-        self.left_fork = self.table.fork[self.position % self.table.capacity]
-        self.right_fork = self.table.fork[(self.position + 1) % self.table.capacity]
+        self.left = self.position % self.table.capacity
+        self.right = (self.position + 1) % self.table.capacity
+
+        self.left_fork = self.table.fork[self.position]
+        self.right_fork = self.table.fork[self.right]
 
         t = threading.Thread(target = self.think, name = f"Philosopher {self.position}")
         t.start()
@@ -64,7 +68,7 @@ class Philosopher:
         self.update_state(1)
 
         self.left_fork.acquire()
-        time.sleep(random.randint(0, 3))
+        time.sleep(3)
         self.right_fork.acquire()
 
         self.eat()
