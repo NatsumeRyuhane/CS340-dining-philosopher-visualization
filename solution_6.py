@@ -9,12 +9,12 @@ class Table:
         self.philosopher = []
         self.capacity = capacity
         
-        # in this solution, each philosopher will take a number from a counter on the table when hungry
-        # a philosopher will only be allowed to eat if it holds a lower value than its neighbors
         self.counter_lock = threading.Lock()
         self.counter = 0
         self.wait_cond = []
         self.cond_lock = threading.Lock()
+        
+        self.waiting_threshold = int(capacity*0.4)
 
         for i in range(0, self.capacity):
             self.fork.append(threading.Lock())
@@ -77,9 +77,9 @@ class Philosopher:
         self.state = state
         if (state == 3):
             if (self.hunger_left <= self.hunger):
-                msg = f"[Philosopher #{self.position}] is waiting philosopher #{self.left} because they have lower hunger ({self.hunger_left}/{self.hunger})"
+                msg = f"[Philosopher #{self.position}] is waiting philosopher #{self.left} because they have way lower hunger ({self.hunger_left}/{self.hunger})"
             elif (self.hunger_right <= self.hunger):
-                msg = f"[Philosopher #{self.position}] is waiting philosopher #{self.right} because they have lower hunger ({self.hunger_right}/{self.hunger})"
+                msg = f"[Philosopher #{self.position}] is waiting philosopher #{self.right} because they have way lower hunger ({self.hunger_right}/{self.hunger})"
         else:
             msg = f"[Philosopher #{self.position}] changed state to {self.__stateDictionary[self.state]}"
 
@@ -104,7 +104,7 @@ class Philosopher:
             self.hunger_left = self.table.get_philosopher_hunger(self.left)
             self.hunger_right = self.table.get_philosopher_hunger(self.right)
             
-            if ((self.hunger_left < self.hunger) or (self.hunger_right < self.hunger)):
+            if ((self.hunger_left + self.table.waiting_threshold < self.hunger ) or (self.hunger_right + self.table.waiting_threshold < self.hunger)):
                 self.update_state(3)
                 self.table.wait_cond[self.position].wait()
             else: break
@@ -120,10 +120,10 @@ class Philosopher:
         self.eat()
 
     def eat(self):
-        self.hunger = -1
+        self.hunger = -(self.table.waiting_threshold + 1)
         self.update_state(2)
 
-        time.sleep(random.randint(0, 3))
+        time.sleep(random.randint(0, 1))
 
         self.left_fork.release()
         self.right_fork.release()
