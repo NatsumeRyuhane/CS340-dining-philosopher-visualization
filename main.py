@@ -1,4 +1,5 @@
-from philosopher import Table, Philosopher
+# change the import source to see different results
+from solution_0 import Table, Philosopher
 
 n = 5
 
