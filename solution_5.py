@@ -2,6 +2,7 @@ import threading
 import random
 import time
 import json
+from chart import draw
 
 class Table:
 
@@ -10,12 +11,13 @@ class Table:
         self.philosopher = []
         self.capacity = capacity
 
-        self.deadlock_timer_expire = 10
+        self.stateDictionary = {0: "THINKING", 1: "HUNGRY", 2: "EATING", 3: "WAITING", 99: "FINISHED"}
+        self.deadlock_timer_expire = 3
         self.statistics = []
         self.change_count = 0
-
         self.phil_count = 0
         self.finished_phil = 0
+        self.start_time = time.time()
         
         # in this solution, each philosopher will take a number from a counter on the table when hungry
         # a philosopher will only be allowed to eat if it holds a lower value than its neighbors
@@ -91,12 +93,11 @@ class Table:
         with open("result.txt", "w+") as savefile:
             savefile.write(json.dumps(self.statistics, indent = 4))
 
-        #draw(self.statistics)
+        draw(self.statistics, max_time = 1000*(time.time() - self.start_time))
 
 class Philosopher:
 
     def __init__(self, table, position):
-        self.__stateDictionary = {0 : "THINKING", 1 : "HUNGRY", 2 : "EATING", 3 : "WAITING", 99 : "FINISHED"}
         self.table = table
         self.hunger = 2**31
 
@@ -114,7 +115,6 @@ class Philosopher:
         self.left_fork = self.table.fork[self.position]
         self.right_fork = self.table.fork[self.right]
 
-        self.start_time = time.time()
         t = threading.Thread(target = self.think, name = f"Philosopher {self.position}")
         t.start()
 
@@ -126,24 +126,30 @@ class Philosopher:
             elif (self.hunger_right <= self.hunger):
                 msg = f"[Philosopher #{self.position}] is waiting philosopher #{self.right} because they have lower hunger ({self.hunger_right}/{self.hunger})"
         else:
-            msg = f"[Philosopher #{self.position}] changed state to {self.__stateDictionary[self.state]}"
+            msg = f"[Philosopher #{self.position}] changed state to {self.table.stateDictionary[self.state]}"
 
         self.table.pencil.acquire()
         if state == 99: self.table.finished_phil += 1
-        self.table.statistics[self.position][self.state] = round(1000*(time.time() - self.start_time), 2)
+
+        # do not override the value of the waiting state
+        # if two waiting state happens consequently
+        if self.table.stateDictionary[self.state] in self.table.statistics[self.position]: pass
+        else: self.table.statistics[self.position][self.table.stateDictionary[self.state]] = round(1000 * (time.time() - self.table.start_time), 2)
+
         self.table.change_count += 1
+
         print(msg)
         self.table.pencil.release()
 
     def think(self):
         self.update_state(0)
 
-        time.sleep(random.randint(0, 3))
+        time.sleep(random.randint(1, 3)/100)
 
+        self.update_state(1)
         self.compare_hunger()
         
     def compare_hunger(self):
-        self.update_state(1)
         self.hunger = self.table.get_hunger_counter()
         
         self.table.wait_cond[self.position].acquire()
@@ -162,7 +168,7 @@ class Philosopher:
     def take_fork(self):
 
         self.left_fork.acquire()
-        time.sleep(3)
+        time.sleep(0.03)
         self.right_fork.acquire()
 
         self.eat()
@@ -171,13 +177,11 @@ class Philosopher:
         self.hunger = -1
         self.update_state(2)
 
-        time.sleep(random.randint(0, 3))
+        time.sleep(random.randint(1, 3)/100)
 
         self.left_fork.release()
         self.right_fork.release()
         self.finalize()
-
-        
     
     def finalize(self):
         self.hunger = 2**31

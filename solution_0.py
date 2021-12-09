@@ -2,6 +2,7 @@ import threading
 import random
 import time
 import json
+from chart import draw
 
 class Table:
 
@@ -10,14 +11,16 @@ class Table:
         self.philosopher = []
         self.capacity = capacity
 
-        self.deadlock_timer_expire = 10
+        self.deadlock_timer_expire = 0.1
 
         # a pencil on the table prevents the shared output problem
         self.pencil = threading.Lock()
 
+        # this block of attributes are used in statistics
+        self.stateDictionary = {0: "THINKING", 1: "HUNGRY", 2: "EATING", 99: "FINISHED"}
         self.statistics = []
         self.change_count = 0
-
+        self.start_time = time.time()
         self.phil_count = 0
         self.finished_phil = 0
 
@@ -60,7 +63,8 @@ class Table:
             self.pencil.release()
 
             if (time.time() - time_last_update < self.deadlock_timer_expire):
-                time.sleep(1)
+                #time.sleep(1)
+                pass
             elif (self.phil_count != 0 and self.phil_count == self.finished_phil):
                 print("Finished")
                 break
@@ -71,15 +75,12 @@ class Table:
         with open("result.txt", "w+") as savefile:
             savefile.write(json.dumps(self.statistics, indent = 4))
 
-        #draw(self.statistics)
-
-
+        draw(self.statistics, max_time = 1000*(time.time() - self.start_time))
 
 
 class Philosopher:
 
     def __init__(self, table, position):
-        self.__stateDictionary = {0 : "THINKING", 1 : "HUNGRY", 2 : "EATING", 99 : "FINISHED"}
         self.table = table
 
         try:
@@ -96,8 +97,7 @@ class Philosopher:
         self.left_fork = self.table.fork[self.position]
         self.right_fork = self.table.fork[self.right]
 
-        self.start_time = time.time()
-        t = threading.Thread(target = self.think, name = f"Philosopher {self.position}")
+        t = threading.Thread(target = self.think, name = f"Philosopher #{self.position}")
         t.start()
 
     def update_state(self, state):
@@ -106,24 +106,24 @@ class Philosopher:
 
         if state == 99: self.table.finished_phil += 1
 
-        self.table.statistics[self.position][self.state] = round(1000*(time.time() - self.start_time), 2)
+        self.table.statistics[self.position][self.table.stateDictionary[self.state]] = round(1000*(time.time() - self.table.start_time), 2)
         self.table.change_count += 1
-        print(f"[Philosopher #{self.position}] changed state to {self.__stateDictionary[self.state]}")
+        print(f"[Philosopher #{self.position}] changed state to {self.table.stateDictionary[self.state]}")
 
         self.table.pencil.release()
 
     def think(self):
         self.update_state(0)
 
-        time.sleep(random.randint(0, 3))
+        time.sleep(random.randint(1, 3)/100)
 
+        self.update_state(1)
         self.take_fork()
 
     def take_fork(self):
-        self.update_state(1)
 
         self.left_fork.acquire()
-        time.sleep(3)
+        time.sleep(0.03)
         self.right_fork.acquire()
 
         self.eat()
@@ -131,7 +131,7 @@ class Philosopher:
     def eat(self):
         self.update_state(2)
 
-        time.sleep(random.randint(0, 3))
+        time.sleep(random.randint(1, 3)/100)
 
         self.left_fork.release()
         self.right_fork.release()
