@@ -123,7 +123,7 @@ class Philosopher:
         self.update_state(1)
 
         self.left_fork.acquire()
-        time.sleep(0)
+        time.sleep(3)
         self.right_fork.acquire()
 
         self.eat()
