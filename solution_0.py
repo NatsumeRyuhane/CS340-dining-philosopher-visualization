@@ -1,6 +1,7 @@
 import threading
 import random
 import time
+import json
 
 class Table:
 
@@ -28,8 +29,8 @@ class Table:
 
         # an observer on the table to help detect the deadlock condition
         # also used in the eye of the universe to collapse possibilities to create a new universe
-        obeserver = threading.Thread(target=self.observe, name=f"Observer")
-        obeserver.start()
+        observer = threading.Thread(target=self.observe, name=f"Observer")
+        observer.start()
 
     def add_philosopher(self, philosopher, position):
         if position in range(0, self.capacity):
@@ -67,10 +68,10 @@ class Table:
                 print("Deadlock detected!")
                 break
 
-        self.draw_statistics()
+        with open("result.txt", "w+") as savefile:
+            savefile.write(json.dumps(self.statistics, indent = 4))
 
-    def draw_statistics(self):
-        pass
+        #draw(self.statistics)
 
 
 
@@ -96,7 +97,6 @@ class Philosopher:
         self.right_fork = self.table.fork[self.right]
 
         self.start_time = time.time()
-
         t = threading.Thread(target = self.think, name = f"Philosopher {self.position}")
         t.start()
 

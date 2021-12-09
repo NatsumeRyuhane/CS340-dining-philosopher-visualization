@@ -1,7 +1,7 @@
 import threading
 import random
 import time
-
+import json
 
 class Table:
 
@@ -88,10 +88,14 @@ class Table:
                 print("Deadlock detected!")
                 break
 
-        self.draw_statistics()
+        with open("result.txt", "w+") as savefile:
+            savefile.write(str(self.statistics))
 
-    def draw_statistics(self):
-        pass
+
+        with open("result.txt", "w+") as savefile:
+            savefile.write(json.dumps(self.statistics, indent = 4))
+
+        #draw(self.statistics)
 
 
 class Philosopher:
